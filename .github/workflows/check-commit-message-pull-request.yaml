@@ -1,0 +1,32 @@
+---
+name: Check commit message
+
+on:
+  pull_request:
+    branches: [master, main]
+
+jobs:
+
+  on_pull_request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check message commits on pull request
+        run: |
+          # shellcheck source=/dev/null
+          source ".env.commit_message_regexp"
+          set -o errexit   # exit on error
+          set -o nounset   # fail if var undefined
+          set -o noclobber # don't overwrite exists files via >
+          set -o pipefail  # fails if pipes (|) fails
+          # set -o xtrace  # debug
+          COMMIT_MESSAGE_ERRORS=$(git log ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} --pretty=format:%s  --grep="${COMMIT_MESSAGE_REGEXP}" --extended-regexp --invert-grep)
+          if [[ "$COMMIT_MESSAGE_ERRORS" ]]; then
+            echo "Format of commit messages is incorrect, regexp : ${COMMIT_MESSAGE_REGEXP}"
+            echo "${COMMIT_MESSAGE_ERRORS}"
+            exit 1
+          fi
+        shell: bash {0}
